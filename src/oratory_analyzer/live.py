@@ -32,19 +32,22 @@ class LiveTracker:
         self,
         face_extractor: Optional[FaceExtractor] = None,
         pose_extractor: Optional[PoseExtractor] = None,
+        hand_extractor=None,
         *,
         annotator: Optional[FrameAnnotator] = None,
         mirror: bool = True,
         show_hud: bool = True,
         forward_threshold: float = 0.18,
     ) -> None:
-        if face_extractor is None and pose_extractor is None:
+        if face_extractor is None and pose_extractor is None and hand_extractor is None:
             raise ValueError("LiveTracker needs at least one extractor")
         self.face_extractor = face_extractor
         self.pose_extractor = pose_extractor
+        self.hand_extractor = hand_extractor
         self.annotator = annotator or FrameAnnotator(
             draw_face_mesh=face_extractor is not None,
             draw_pose=pose_extractor is not None,
+            draw_hands=hand_extractor is not None,
         )
         self.mirror = mirror
         self.show_hud = show_hud
@@ -57,25 +60,35 @@ class LiveTracker:
         *,
         analyze_face: bool = True,
         analyze_pose: bool = True,
+        analyze_hands: bool = True,
         **kwargs,
     ) -> "LiveTracker":
         from .landmarks import get_mediapipe_extractors
 
         # Single face in live mode = your face, the most prominent one.
-        face, pose = get_mediapipe_extractors(
-            extract_face=analyze_face, extract_pose=analyze_pose, max_num_faces=1
+        ex = get_mediapipe_extractors(
+            extract_face=analyze_face,
+            extract_pose=analyze_pose,
+            extract_hands=analyze_hands,
+            max_num_faces=1,
+            max_num_hands=2,
         )
-        return cls(face, pose, **kwargs)
+        return cls(ex.face, ex.pose, ex.hands, **kwargs)
 
     # --- per-frame logic (testable without a camera) -------------------
 
     def _frame_landmarks(self, frame_bgr: np.ndarray) -> FrameLandmarks:
         face = self.face_extractor.extract(frame_bgr) if self.face_extractor else None
         pose = self.pose_extractor.extract(frame_bgr) if self.pose_extractor else None
+        hands = (
+            tuple(self.hand_extractor.extract(frame_bgr)) if self.hand_extractor else ()
+        )
         face_box = (
             BoundingBox.from_points(face.points, padding=0.02) if face is not None else None
         )
-        return FrameLandmarks(index=0, timestamp=0.0, face=face, pose=pose, face_box=face_box)
+        return FrameLandmarks(
+            index=0, timestamp=0.0, face=face, pose=pose, hands=hands, face_box=face_box
+        )
 
     def live_cues(self, fl: FrameLandmarks) -> Dict[str, str]:
         """Compute a few human-readable per-frame delivery cues for the HUD."""
@@ -104,6 +117,7 @@ class LiveTracker:
         status = {
             "face": "yes" if fl.has_face else "no",
             "pose": "yes" if fl.has_pose else "no",
+            "hands": str(fl.num_hands),
         }
         status.update(self.live_cues(fl))
         if self.show_hud:
@@ -114,7 +128,10 @@ class LiveTracker:
         import cv2
 
         fps = self._current_fps()
-        lines = [f"FPS: {fps:4.1f}", f"Face: {status['face']}  Pose: {status['pose']}"]
+        lines = [
+            f"FPS: {fps:4.1f}",
+            f"Face: {status['face']}  Pose: {status['pose']}  Hands: {status.get('hands', '0')}",
+        ]
         if "eye_contact" in status:
             lines.append(f"Eye contact: {status['eye_contact']}")
         if "shoulders" in status:
@@ -124,7 +141,7 @@ class LiveTracker:
 
         # translucent backdrop for legibility
         overlay = img.copy()
-        cv2.rectangle(overlay, (0, 0), (270, 22 + 22 * len(lines)), (0, 0, 0), -1)
+        cv2.rectangle(overlay, (0, 0), (330, 22 + 22 * len(lines)), (0, 0, 0), -1)
         cv2.addWeighted(overlay, 0.45, img, 0.55, 0, img)
         for i, text in enumerate(lines):
             cv2.putText(
@@ -192,3 +209,5 @@ class LiveTracker:
             self.face_extractor.close()
         if self.pose_extractor is not None:
             self.pose_extractor.close()
+        if self.hand_extractor is not None:
+            self.hand_extractor.close()

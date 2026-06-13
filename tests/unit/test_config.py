@@ -19,7 +19,8 @@ def test_defaults_valid():
         {"sample_fps": 0},
         {"sample_fps": -1},
         {"max_num_faces": 0},
-        {"analyze_face": False, "analyze_pose": False},
+        {"max_num_hands": 0},
+        {"analyze_face": False, "analyze_pose": False, "analyze_hands": False},
     ],
 )
 def test_invalid_configs(kwargs):

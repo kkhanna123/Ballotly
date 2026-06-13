@@ -9,6 +9,7 @@ from typing import Optional
 
 import numpy as np
 
+from ..domain import Hands
 from ..domain.landmarks import BoundingBox, FrameLandmarks
 
 # A compact subset of pose connections (BlazePose) for a readable skeleton.
@@ -27,15 +28,19 @@ class FrameAnnotator:
         *,
         face_color=(0, 200, 0),
         pose_color=(0, 160, 255),
+        hand_color=(255, 80, 200),
         box_color=(0, 255, 255),
         draw_face_mesh: bool = True,
         draw_pose: bool = True,
+        draw_hands: bool = True,
     ) -> None:
         self.face_color = face_color
         self.pose_color = pose_color
+        self.hand_color = hand_color
         self.box_color = box_color
         self.draw_face_mesh = draw_face_mesh
         self.draw_pose = draw_pose
+        self.draw_hands = draw_hands
 
     def annotate(self, frame_bgr: np.ndarray, fl: FrameLandmarks) -> np.ndarray:
         import cv2
@@ -67,6 +72,21 @@ class FrameAnnotator:
             for p in pts:
                 if p.visibility >= 0.4:
                     cv2.circle(out, (int(p.x * w), int(p.y * h)), 3, self.pose_color, -1)
+
+        if self.draw_hands and fl.hands:
+            for hand in fl.hands:
+                pts = hand.points
+                for a, b in Hands.CONNECTIONS:
+                    pa, pb = pts[a], pts[b]
+                    cv2.line(
+                        out,
+                        (int(pa.x * w), int(pa.y * h)),
+                        (int(pb.x * w), int(pb.y * h)),
+                        self.hand_color,
+                        2,
+                    )
+                for p in pts:
+                    cv2.circle(out, (int(p.x * w), int(p.y * h)), 3, self.hand_color, -1)
 
         return out
 

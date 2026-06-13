@@ -38,6 +38,7 @@ class _FrameRecord:
     faces: List = field(default_factory=list)         # List[FaceLandmarks]
     boxes: List[BoundingBox] = field(default_factory=list)
     pose: Optional[object] = None                       # Optional[PoseLandmarks]
+    hands: tuple = ()                                    # Tuple[HandLandmarks, ...]
 
 
 @dataclass
@@ -54,6 +55,7 @@ class OratoryAnalysisPipeline:
         self,
         face_extractor: Optional[FaceExtractor] = None,
         pose_extractor: Optional[PoseExtractor] = None,
+        hand_extractor=None,
         *,
         selector: Optional[SpeakerSelector] = None,
         registry: Optional[MetricRegistry] = None,
@@ -61,10 +63,11 @@ class OratoryAnalysisPipeline:
         config: Optional[PipelineConfig] = None,
         progress: Optional[ProgressReporter] = None,
     ) -> None:
-        if face_extractor is None and pose_extractor is None:
+        if face_extractor is None and pose_extractor is None and hand_extractor is None:
             raise ValueError("pipeline needs at least one extractor")
         self.face_extractor = face_extractor
         self.pose_extractor = pose_extractor
+        self.hand_extractor = hand_extractor
         self.selector = selector or SpeakerSelector()
         self.registry = registry or MetricRegistry.default()
         self.analyzer = analyzer or Analyzer()
@@ -80,12 +83,14 @@ class OratoryAnalysisPipeline:
         from .landmarks import get_mediapipe_extractors
 
         config = config or PipelineConfig()
-        face, pose = get_mediapipe_extractors(
+        ex = get_mediapipe_extractors(
             extract_face=config.analyze_face,
             extract_pose=config.analyze_pose,
+            extract_hands=config.analyze_hands,
             max_num_faces=config.max_num_faces,
+            max_num_hands=config.max_num_hands,
         )
-        return cls(face, pose, config=config, **kwargs)
+        return cls(ex.face, ex.pose, ex.hands, config=config, **kwargs)
 
     # --- extraction primitives -----------------------------------------
 
@@ -123,6 +128,7 @@ class OratoryAnalysisPipeline:
                     timestamp=rec.timestamp,
                     face=face,
                     pose=rec.pose,
+                    hands=rec.hands,
                     face_box=face_box,
                 )
             )
@@ -146,8 +152,16 @@ class OratoryAnalysisPipeline:
                 if self.pose_extractor is not None
                 else None
             )
+            hands = (
+                tuple(self.hand_extractor.extract(frame_bgr))
+                if self.hand_extractor is not None
+                else ()
+            )
             records.append(
-                _FrameRecord(index=index, timestamp=timestamp, faces=faces, boxes=boxes, pose=pose)
+                _FrameRecord(
+                    index=index, timestamp=timestamp, faces=faces, boxes=boxes,
+                    pose=pose, hands=hands,
+                )
             )
             if len(records) % 50 == 0:
                 self.progress.log(f"Processed {len(records)} frames…")
@@ -156,7 +170,9 @@ class OratoryAnalysisPipeline:
             raise ValueError("No frames were decoded from the source")
 
         frames = self._build_speaker_frames(records)
-        frames_with_speaker = sum(1 for f in frames if f.has_face or f.has_pose)
+        frames_with_speaker = sum(
+            1 for f in frames if f.has_face or f.has_pose or f.has_hands
+        )
 
         results = self.registry.evaluate(frames)
         if not results:
@@ -220,6 +236,7 @@ class OratoryAnalysisPipeline:
         annotator = FrameAnnotator(
             draw_face_mesh=self.config.analyze_face,
             draw_pose=self.config.analyze_pose,
+            draw_hands=self.config.analyze_hands,
         )
         os.makedirs(self.config.output_dir, exist_ok=True)
         out_path = os.path.join(self.config.output_dir, "annotated.mp4")
@@ -245,3 +262,5 @@ class OratoryAnalysisPipeline:
             self.face_extractor.close()
         if self.pose_extractor is not None:
             self.pose_extractor.close()
+        if self.hand_extractor is not None:
+            self.hand_extractor.close()

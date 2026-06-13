@@ -19,6 +19,7 @@ from ..domain.landmarks import FrameLandmarks
 # Which landmark group a metric needs.
 FACE = "face"
 POSE = "pose"
+HANDS = "hands"
 
 
 @dataclass

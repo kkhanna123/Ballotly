@@ -9,7 +9,8 @@ optional annotated video).
 ```
 video ──► landmark extraction ──► speaker selection ──► metrics ──► scoring ──► report
           (MediaPipe Face Mesh        (IoU tracking +     (eye contact,   (weighted   (JSON/MD/HTML
-           + Pose, pluggable)          dominance score)    posture, …)     grade)      + plots + mp4)
+           + Pose + Hands,             dominance score)    posture,        grade)      + plots + mp4)
+           pluggable)                                      gestures, …)
 ```
 
 ## What it measures
@@ -19,8 +20,13 @@ video ──► landmark extraction ──► speaker selection ──► metric
 | **Eye contact** | Face mesh + irises | Facing the audience; not buried in notes |
 | **Head stability** | Face mesh | Composed head carriage vs. nervous swaying |
 | **Facial expressivity** | Face mesh | Animated brow/mouth vs. flat affect |
-| **Posture & stance** | Pose | Upright, level shoulders, no slouch |
-| **Hand gestures** | Pose | Purposeful gesturing vs. frozen or frantic |
+| **Posture & stance** | Pose (body) | Upright, level shoulders, no slouch |
+| **Hand gestures** | Pose (body) | Broad arm/wrist gesturing vs. frozen or frantic |
+| **Hand gestures (detailed)** | Hands | Finger-level gesturing + articulation (21-pt hand model) |
+
+Three tracking modalities run together: **face** (468-pt mesh + irises),
+**body** (33-pt pose), and **hands** (21-pt hand model per hand, up to two).
+Each can be toggled independently.
 
 Every metric is normalized to **0–100 (higher is better)**, combined into a
 weighted overall grade (A–F), and turned into prioritized, actionable
@@ -90,8 +96,8 @@ unit-testable without video files or ML models.
 
 ```
 src/oratory_analyzer/
-  domain/      value objects: Point3D, Face/Pose/FrameLandmarks, BoundingBox, geometry
-  landmarks/   LandmarkExtractor ABCs + MediaPipe adapters + scripted fakes
+  domain/      value objects: Point3D, Face/Pose/Hand/FrameLandmarks, BoundingBox, geometry
+  landmarks/   Face/Pose/Hand extractor ABCs + MediaPipe adapters + scripted fakes
   detection/   IoU tracker + primary-speaker selector (engine-agnostic, pure)
   video/       OpenCV reader/writer + frame annotator (I/O edge)
   metrics/     the five oratory metrics + scoring helpers + registry
@@ -102,9 +108,10 @@ src/oratory_analyzer/
 ```
 
 **Swappable engine.** Landmark extraction sits behind `FaceExtractor` /
-`PoseExtractor` interfaces. MediaPipe is the default (pretrained, CPU, no
-training required); DeepLabCut, Roboflow `supervision`, or MMPose could be
-dropped in by implementing the same interface — nothing downstream changes.
+`PoseExtractor` / `HandExtractor` interfaces. MediaPipe is the default
+(pretrained, CPU, no training required); DeepLabCut, Roboflow `supervision`, or
+MMPose could be dropped in by implementing the same interface — nothing
+downstream changes.
 
 ## Testing
 

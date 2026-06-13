@@ -24,11 +24,11 @@ def test_analyze_defaults():
 def test_analyze_flags():
     args = build_parser().parse_args(
         ["analyze", "clip.mp4", "-o", "out", "--sample-fps", "5",
-         "--no-pose", "--annotated-video", "--quiet"]
+         "--no-pose", "--no-hands", "--annotated-video", "--quiet"]
     )
     assert args.out == "out"
     assert args.sample_fps == 5.0
-    assert args.no_pose and not args.no_face
+    assert args.no_pose and args.no_hands and not args.no_face
     assert args.annotated_video and args.quiet
 
 
@@ -52,6 +52,11 @@ def test_live_flags():
     assert args.no_pose and args.no_hud and args.no_mirror
 
 
-def test_live_both_overlays_disabled_errors():
-    # disabling both face and pose => error code 2, no camera/MediaPipe touched
-    assert main(["live", "--no-face", "--no-pose"]) == 2
+def test_live_all_overlays_disabled_errors():
+    # disabling face, pose, and hands => error code 2, no camera/MediaPipe touched
+    assert main(["live", "--no-face", "--no-pose", "--no-hands"]) == 2
+
+
+def test_live_disabling_two_is_allowed_at_parse():
+    args = build_parser().parse_args(["live", "--no-face", "--no-pose"])
+    assert args.no_face and args.no_pose and not args.no_hands

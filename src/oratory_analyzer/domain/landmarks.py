@@ -102,6 +102,30 @@ class PoseLandmarks:
 
 
 @dataclass(frozen=True)
+class HandLandmarks:
+    """MediaPipe Hands output: 21 normalized landmarks for a single hand.
+
+    ``handedness`` is ``"Left"``, ``"Right"``, or ``"Unknown"`` as reported by
+    the detector (from the camera's point of view).
+    """
+
+    points: Tuple[Point3D, ...]
+    handedness: str = "Unknown"
+
+    def __post_init__(self) -> None:
+        if not self.points:
+            raise ValueError("HandLandmarks requires at least one point")
+        if self.handedness not in ("Left", "Right", "Unknown"):
+            raise ValueError(f"invalid handedness: {self.handedness!r}")
+
+    def __len__(self) -> int:
+        return len(self.points)
+
+    def __getitem__(self, index: int) -> Point3D:
+        return self.points[index]
+
+
+@dataclass(frozen=True)
 class BoundingBox:
     """Axis-aligned bounding box in normalized coordinates."""
 
@@ -172,6 +196,7 @@ class FrameLandmarks:
     timestamp: float
     face: Optional[FaceLandmarks] = None
     pose: Optional[PoseLandmarks] = None
+    hands: Tuple[HandLandmarks, ...] = ()
     face_box: Optional[BoundingBox] = None
     metadata: Dict[str, float] = field(default_factory=dict)
 
@@ -184,6 +209,14 @@ class FrameLandmarks:
         return self.pose is not None
 
     @property
+    def has_hands(self) -> bool:
+        return len(self.hands) > 0
+
+    @property
+    def num_hands(self) -> int:
+        return len(self.hands)
+
+    @property
     def is_empty(self) -> bool:
-        """True when neither face nor pose was detected (a dropped frame)."""
-        return self.face is None and self.pose is None
+        """True when no landmarks of any kind were detected (a dropped frame)."""
+        return self.face is None and self.pose is None and not self.hands

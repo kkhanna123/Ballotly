@@ -17,10 +17,13 @@ from typing import Optional
 
 import numpy as np
 
+from typing import Tuple
+
 from ..domain.landmarks import (
     BoundingBox,
     FaceLandmarks,
     FrameLandmarks,
+    HandLandmarks,
     PoseLandmarks,
 )
 
@@ -47,6 +50,17 @@ class PoseExtractor(ABC):
         """Release any underlying model resources."""
 
 
+class HandExtractor(ABC):
+    """Extracts all visible hands' landmarks from one frame."""
+
+    @abstractmethod
+    def extract(self, frame_bgr: np.ndarray) -> Tuple[HandLandmarks, ...]:
+        """Return a tuple of detected hands (possibly empty)."""
+
+    def close(self) -> None:  # pragma: no cover - default no-op
+        """Release any underlying model resources."""
+
+
 class LandmarkPipeline:
     """Combines a face and/or pose extractor into per-frame ``FrameLandmarks``.
 
@@ -59,13 +73,15 @@ class LandmarkPipeline:
         self,
         face_extractor: Optional[FaceExtractor] = None,
         pose_extractor: Optional[PoseExtractor] = None,
+        hand_extractor: Optional[HandExtractor] = None,
         *,
         face_box_padding: float = 0.02,
     ) -> None:
-        if face_extractor is None and pose_extractor is None:
+        if face_extractor is None and pose_extractor is None and hand_extractor is None:
             raise ValueError("LandmarkPipeline needs at least one extractor")
         self._face = face_extractor
         self._pose = pose_extractor
+        self._hands = hand_extractor
         self._padding = face_box_padding
 
     def process(
@@ -73,6 +89,9 @@ class LandmarkPipeline:
     ) -> FrameLandmarks:
         face = self._face.extract(frame_bgr) if self._face else None
         pose = self._pose.extract(frame_bgr) if self._pose else None
+        hands: Tuple[HandLandmarks, ...] = (
+            tuple(self._hands.extract(frame_bgr)) if self._hands else ()
+        )
         face_box: Optional[BoundingBox] = None
         if face is not None:
             face_box = BoundingBox.from_points(face.points, padding=self._padding)
@@ -81,6 +100,7 @@ class LandmarkPipeline:
             timestamp=timestamp,
             face=face,
             pose=pose,
+            hands=hands,
             face_box=face_box,
         )
 
@@ -89,6 +109,8 @@ class LandmarkPipeline:
             self._face.close()
         if self._pose:
             self._pose.close()
+        if self._hands:
+            self._hands.close()
 
     def __enter__(self) -> "LandmarkPipeline":
         return self

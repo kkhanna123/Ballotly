@@ -10,10 +10,11 @@ from __future__ import annotations
 from typing import Dict, List, Sequence
 
 from ..domain.landmarks import FrameLandmarks
-from .base import FACE, POSE, Metric, MetricResult
+from .base import FACE, HANDS, POSE, Metric, MetricResult
 from .eye_contact import EyeContactMetric
 from .facial_expressivity import FacialExpressivityMetric
 from .gestures import GestureMetric
+from .hand_gestures import HandGestureMetric
 from .head_stability import HeadStabilityMetric
 from .posture import PostureMetric
 
@@ -36,6 +37,7 @@ class MetricRegistry:
                 FacialExpressivityMetric(),
                 PostureMetric(),
                 GestureMetric(),
+                HandGestureMetric(),
             ]
         )
 
@@ -54,11 +56,11 @@ class MetricRegistry:
         """
         has_face = any(f.has_face for f in frames)
         has_pose = any(f.has_pose for f in frames)
+        has_hands = any(f.has_hands for f in frames)
+        present = {FACE: has_face, POSE: has_pose, HANDS: has_hands}
         results: Dict[str, MetricResult] = {}
         for metric in self._metrics:
-            if metric.requires == FACE and not has_face:
-                continue
-            if metric.requires == POSE and not has_pose:
+            if not present.get(metric.requires, True):
                 continue
             result = metric.compute(frames)
             result.weight = metric.weight  # carry weight forward for aggregation

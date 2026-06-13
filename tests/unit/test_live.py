@@ -5,10 +5,14 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from oratory_analyzer.landmarks import ScriptedFaceExtractor, ScriptedPoseExtractor
+from oratory_analyzer.landmarks import (
+    ScriptedFaceExtractor,
+    ScriptedHandExtractor,
+    ScriptedPoseExtractor,
+)
 from oratory_analyzer.live import LiveTracker
 
-from ..conftest import make_face, make_pose
+from ..conftest import make_face, make_hand, make_pose
 
 FRAME = np.zeros((120, 160, 3), dtype=np.uint8)
 
@@ -58,6 +62,15 @@ def test_live_cue_posture():
     _out, status = tracker.process_frame(FRAME)
     assert status["shoulders"] == "level"
     assert status["lean"] == "upright"
+
+
+def test_process_frame_reports_hand_count():
+    tracker = LiveTracker(
+        None, None, ScriptedHandExtractor([(make_hand(), make_hand())]),
+        mirror=False, show_hud=False,
+    )
+    _out, status = tracker.process_frame(FRAME)
+    assert status["hands"] == "2"
 
 
 def test_fps_starts_at_zero():

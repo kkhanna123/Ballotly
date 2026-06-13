@@ -45,9 +45,10 @@ A window opens showing your mirrored webcam feed with:
 
 - a green **face mesh** (468 points) drawn on your face,
 - iris points and a yellow **speaker** box,
-- an orange **pose skeleton** across your shoulders/arms/torso,
-- a HUD (top-left) with **FPS**, detection status, and live **eye-contact** and
-  **posture** cues that update as you move.
+- an orange **body/pose skeleton** across your shoulders/arms/torso,
+- magenta **hand skeletons** (21 points per hand) on each detected hand,
+- a HUD (top-left) with **FPS**, detection status (face / pose / hand count),
+  and live **eye-contact** and **posture** cues that update as you move.
 
 **Press `q` or `Esc` (with the window focused) to quit.**
 
@@ -57,8 +58,9 @@ A window opens showing your mirrored webcam feed with:
 |---|---|
 | `live -c 1` | Use camera index 1 (external/second webcam) |
 | `live --width 1280 --height 720` | Request a capture resolution |
-| `live --no-pose` | Face mesh only (faster, good for a head shot) |
-| `live --no-face` | Pose skeleton only |
+| `live --no-pose` | Skip the body skeleton |
+| `live --no-face` | Skip the face mesh |
+| `live --no-hands` | Skip the hand skeletons |
 | `live --no-mirror` | Don't mirror the preview |
 | `live --no-hud` | Hide the status overlay |
 
@@ -100,7 +102,7 @@ Outputs land in `report/`:
 |---|---|
 | `--sample-fps 6` | Analyze ~6 frames/sec (faster on long clips) |
 | `--annotated-video` | Also write `report/annotated.mp4` with the overlays |
-| `--no-pose` / `--no-face` | Skip a landmark group |
+| `--no-pose` / `--no-face` / `--no-hands` | Skip a landmark group |
 | `--no-plots` | Skip chart generation |
 | `--quiet` | Suppress progress output |
 

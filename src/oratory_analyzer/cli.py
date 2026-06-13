@@ -39,7 +39,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Max faces detected per frame for speaker selection (default: 3).",
     )
     analyze.add_argument("--no-face", action="store_true", help="Skip face analysis.")
-    analyze.add_argument("--no-pose", action="store_true", help="Skip pose analysis.")
+    analyze.add_argument("--no-pose", action="store_true", help="Skip pose (body) analysis.")
+    analyze.add_argument("--no-hands", action="store_true", help="Skip hand analysis.")
     analyze.add_argument("--no-plots", action="store_true", help="Skip chart generation.")
     analyze.add_argument(
         "--annotated-video", action="store_true",
@@ -58,7 +59,8 @@ def build_parser() -> argparse.ArgumentParser:
     live.add_argument("--width", type=int, default=None, help="Requested capture width.")
     live.add_argument("--height", type=int, default=None, help="Requested capture height.")
     live.add_argument("--no-face", action="store_true", help="Skip face mesh overlay.")
-    live.add_argument("--no-pose", action="store_true", help="Skip pose skeleton overlay.")
+    live.add_argument("--no-pose", action="store_true", help="Skip pose (body) skeleton overlay.")
+    live.add_argument("--no-hands", action="store_true", help="Skip hand skeleton overlay.")
     live.add_argument("--no-mirror", action="store_true", help="Do not mirror the preview.")
     live.add_argument("--no-hud", action="store_true", help="Hide the status HUD.")
     return parser
@@ -74,6 +76,7 @@ def _run_analyze(args: argparse.Namespace) -> int:
         max_num_faces=args.max_faces,
         analyze_face=not args.no_face,
         analyze_pose=not args.no_pose,
+        analyze_hands=not args.no_hands,
         write_annotated_video=args.annotated_video,
         output_dir=args.out,
         with_plots=not args.no_plots,
@@ -102,8 +105,8 @@ def _run_analyze(args: argparse.Namespace) -> int:
 
 
 def _run_live(args: argparse.Namespace) -> int:
-    if args.no_face and args.no_pose:
-        print("error: cannot disable both face and pose overlays", file=sys.stderr)
+    if args.no_face and args.no_pose and args.no_hands:
+        print("error: cannot disable face, pose, and hands all at once", file=sys.stderr)
         return 2
 
     from .live import LiveTracker
@@ -111,6 +114,7 @@ def _run_live(args: argparse.Namespace) -> int:
     tracker = LiveTracker.with_mediapipe(
         analyze_face=not args.no_face,
         analyze_pose=not args.no_pose,
+        analyze_hands=not args.no_hands,
         mirror=not args.no_mirror,
         show_hud=not args.no_hud,
     )

@@ -184,8 +184,8 @@ class TestFacialExpressivity:
 
 
 class TestRegistry:
-    def test_default_runs_all_when_both_present(self):
-        frames = [make_frame(i, i * 0.1) for i in range(10)]
+    def test_default_runs_face_and_pose_when_present(self):
+        frames = [make_frame(i, i * 0.1) for i in range(10)]  # face+pose, no hands
         results = MetricRegistry.default().evaluate(frames)
         assert set(results) == {
             "eye_contact",
@@ -194,6 +194,17 @@ class TestRegistry:
             "posture",
             "gestures",
         }
+        assert "hand_gestures" not in results  # no hands present
+
+    def test_hand_metric_runs_when_hands_present(self):
+        frames = [make_frame(i, i * 0.1, with_hands=True) for i in range(10)]
+        results = MetricRegistry.default().evaluate(frames)
+        assert "hand_gestures" in results
+
+    def test_skips_face_and_pose_when_only_hands(self):
+        frames = [make_frame(i, i * 0.1, with_face=False, with_pose=False, with_hands=True) for i in range(10)]
+        results = MetricRegistry.default().evaluate(frames)
+        assert set(results) == {"hand_gestures"}
 
     def test_skips_pose_metrics_when_no_pose(self):
         frames = [make_frame(i, i * 0.1, with_pose=False) for i in range(10)]

@@ -30,8 +30,10 @@ class PipelineConfig:
 
     sample_fps: float = 12.0
     max_num_faces: int = 3
+    max_num_hands: int = 2
     analyze_face: bool = True
     analyze_pose: bool = True
+    analyze_hands: bool = True
     write_annotated_video: bool = False
     output_dir: str = "oratory_report"
     with_plots: bool = True
@@ -41,5 +43,9 @@ class PipelineConfig:
             raise ValueError("sample_fps must be positive")
         if self.max_num_faces < 1:
             raise ValueError("max_num_faces must be >= 1")
-        if not (self.analyze_face or self.analyze_pose):
-            raise ValueError("at least one of analyze_face/analyze_pose must be true")
+        if self.max_num_hands < 1:
+            raise ValueError("max_num_hands must be >= 1")
+        if not (self.analyze_face or self.analyze_pose or self.analyze_hands):
+            raise ValueError(
+                "at least one of analyze_face/analyze_pose/analyze_hands must be true"
+            )

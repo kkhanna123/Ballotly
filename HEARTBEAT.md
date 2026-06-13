@@ -83,6 +83,15 @@ and generates a report on how to improve oratory ability for debate competition.
 3. Added explicit "not assessed" handling after real footage revealed the
    zero-coverage gesture bug.
 
+- `2026-06-13 (follow-up 2)` — Added **dedicated hand + body tracking**. Body was
+  already covered by Pose (33 pts); added MediaPipe **Hands** (21 pts/hand, up to
+  2 hands) behind a new `HandExtractor` interface. New `HandLandmarks` domain
+  model + `Hands` indices; `FrameLandmarks.hands`. New `HandGestureMetric`
+  (finger-level openness + hand motion in hand-widths/sec) with a `HANDS` metric
+  category. Wired through pipeline, annotator (magenta hand skeleton), live HUD
+  (hand count), config + CLI (`--no-hands`). Verified end-to-end on a classroom
+  clip: hands detected (42% coverage), scored, and rendered in the annotated
+  video (confirmed the magenta hand overlay visually). **195 tests green.**
 - `2026-06-13 (follow-up)` — Added **live webcam mode**: `live.py` (`LiveTracker`)
   opens the laptop camera and overlays the face mesh + pose skeleton in real time
   with a HUD (FPS, detection status, live eye-contact + posture cues). Wired as
