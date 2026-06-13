@@ -1,0 +1,19 @@
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+install.log
+build/
+dist/
+# generated outputs
+output/
+report_output/
+*.mp4
+!tests/fixtures/*.mp4
+figures/
+# downloaded sample clip + generated example reports (reproducible, large)
+samples/
+oratory_report/

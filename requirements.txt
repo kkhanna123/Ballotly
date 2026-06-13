@@ -1,0 +1,12 @@
+# Core landmark extraction engine
+mediapipe==0.10.14        # pretrained Face Mesh + Pose (CPU, no training required)
+opencv-python==4.10.0.84  # video I/O and frame annotation
+numpy>=1.24,<2.0          # numerical core (mediapipe 0.10.x requires numpy<2)
+
+# Reporting
+jinja2>=3.1               # HTML report templating
+matplotlib>=3.7           # timeline / metric plots
+
+# Dev / test
+pytest>=8.0
+pytest-cov>=5.0
